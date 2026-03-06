@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dünya ve Türkiye Deprem Haritası</title>
 
-<!-- Leaflet ve MarkerCluster CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
@@ -19,7 +18,6 @@ html, body { margin:0; padding:0; height:100%; width:100%; }
 
 <div id="map"></div>
 
-<!-- Leaflet ve MarkerCluster JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
@@ -27,7 +25,7 @@ html, body { margin:0; padding:0; height:100%; width:100%; }
 // Map
 var map = L.map('map').setView([39,35], 4);
 
-// OpenStreetMap katmanı
+// OSM tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     maxZoom:19
 }).addTo(map);
@@ -43,45 +41,46 @@ function depremRenk(mag){
     else return "#f03b20";
 }
 
-// Türkiye fay hatları
-var fayHatlari = L.geoJSON(null, { style:{color:"#ff0000", weight:2, fillOpacity:0} }).addTo(map);
-fetch("DFY_GEO_WGS84_2013_s.json")
-.then(res => res.json())
-.then(data => fayHatlari.addData(data));
-
-// USGS dünya depremleri
+// USGS dünya depremleri (son 24 saat)
 fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
 .then(res => res.json())
 .then(data => animateDepremler(data));
 
-// Türkiye AFAD / Kandilli depremleri (örnek JSON dosya)
-fetch("AFAD_KANDILLI_TURKEY.json") // repo ile aynı klasöre koy
+// Türkiye AFAD canlı depremleri
+// AFAD JSON feed: son 7 gün
+fetch("https://deprem.afad.gov.tr/last-earthquakes.json") // AFAD güncel JSON URL
 .then(res => res.json())
 .then(data => {
     data.forEach(eq => {
-        var marker = L.circleMarker([eq.lat, eq.lon], {
-            radius: eq.mag*3,
-            color: depremRenk(eq.mag),
-            fillColor: depremRenk(eq.mag),
+        let lat = eq.latitude;
+        let lng = eq.longitude;
+        let mag = eq.magnitude;
+        let place = eq.locationName;
+        let marker = L.circleMarker([lat, lng], {
+            radius: mag*3,
+            color: depremRenk(mag),
+            fillColor: depremRenk(mag),
             fillOpacity: 0.7
-        }).bindPopup("<b>"+eq.loc+"</b><br>Büyüklük: "+eq.mag);
+        }).bindPopup("<b>"+place+"</b><br>Büyüklük: "+mag);
         depremCluster.addLayer(marker);
     });
 });
 
-// Animasyonlu deprem ekleme
+// Animasyonlu deprem ekleme (USGS)
 function animateDepremler(data){
     let sorted = data.features.sort((a,b)=> b.properties.time - a.properties.time);
     let index = 0;
     function addNext(){
         if(index >= sorted.length) return;
         let eq = sorted[index];
-        let marker = L.circleMarker([eq.geometry.coordinates[1], eq.geometry.coordinates[0]], {
-            radius: eq.properties.mag*3,
-            color: depremRenk(eq.properties.mag),
-            fillColor: depremRenk(eq.properties.mag),
+        let coords = eq.geometry.coordinates;
+        let props = eq.properties;
+        let marker = L.circleMarker([coords[1], coords[0]], {
+            radius: props.mag*3,
+            color: depremRenk(props.mag),
+            fillColor: depremRenk(props.mag),
             fillOpacity: 0.7
-        }).bindPopup("<b>"+eq.properties.place+"</b><br>Büyüklük: "+eq.properties.mag);
+        }).bindPopup("<b>"+props.place+"</b><br>Büyüklük: "+props.mag);
         depremCluster.addLayer(marker);
         index++;
         setTimeout(addNext, 50);
@@ -89,9 +88,8 @@ function animateDepremler(data){
     addNext();
 }
 
-// Katman kontrolü
+// Layer kontrolü (istediğin zaman aç/kapa)
 var overlays = {
-    "Türkiye Fay Hatları": fayHatlari,
     "Depremler": depremCluster
 };
 L.control.layers(null, overlays).addTo(map);
