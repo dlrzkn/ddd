@@ -12,5 +12,40 @@ html, body { margin:0; padding:0; height:100%; width:100%; }
 </head>
 <body>
 <div id="map"></div>
+  <!-- Mapbox JS ve test noktası -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.16.0/mapbox-gl.js"></script>
+  <script>
+    mapboxgl.accessToken = 'YENI_PUBLIC_TOKEN'; // Mapbox public token
+
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [35, 39],
+        zoom: 5
+    });
+
+    // Test noktası
+    map.on('load', () => {
+        map.addLayer({
+            id: 'test-point',
+            type: 'circle',
+            source: {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: [{
+                        type: 'Feature',
+                        geometry: { type: 'Point', coordinates: [35, 39] },
+                        properties: { title: 'Test Deprem' }
+                    }]
+                }
+            },
+            paint: {
+                'circle-radius': 10,
+                'circle-color': '#f00'
+            }
+        });
+    });
+  </script>
 </body>
 </html>
