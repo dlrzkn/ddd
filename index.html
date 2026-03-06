@@ -1,108 +1,101 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-<meta charset="utf-8">
-<title>Türkiye Deprem Haritası</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dünya ve Türkiye Deprem Haritası</title>
 
+<!-- Leaflet ve MarkerCluster CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
 <style>
-html, body {
-  margin:0;
-  padding:0;
-  height:100%;
-}
-#map {
-  width:100%;
-  height:100%;
-}
+html, body { margin:0; padding:0; height:100%; width:100%; }
+#map { width:100%; height:100%; }
 </style>
 </head>
-
 <body>
 
 <div id="map"></div>
 
+<!-- Leaflet ve MarkerCluster JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script>
+// Map
+var map = L.map('map').setView([39,35], 4);
 
-// HARITA
-var map = L.map('map').setView([39,35],6);
-
-// HARITA TABANI
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-maxZoom:19
+// OpenStreetMap katmanı
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:19
 }).addTo(map);
 
-// BÜYÜKLÜĞE GÖRE RENK
+// Cluster grubu
+var depremCluster = L.markerClusterGroup();
+map.addLayer(depremCluster);
+
+// Büyüklüğe göre renk
 function depremRenk(mag){
-
-if(mag >= 6) return "#ff0000";
-if(mag >= 5) return "#ff6600";
-if(mag >= 4) return "#ffcc00";
-if(mag >= 3) return "#ffff00";
-return "#00ff00";
-
+    if(mag < 3) return "#ffffb2";
+    else if(mag < 5) return "#fd8d3c";
+    else return "#f03b20";
 }
 
-// DEPREM KATMANI
-var depremLayer = L.layerGroup().addTo(map);
-
-// USGS DEPREM VERİSİ
-fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
-.then(response => response.json())
-.then(data => {
-
-data.features.forEach(eq => {
-
-var coords = eq.geometry.coordinates;
-var mag = eq.properties.mag;
-var place = eq.properties.place;
-
-L.circleMarker([coords[1], coords[0]],{
-radius: mag * 3,
-color: depremRenk(mag),
-fillColor: depremRenk(mag),
-fillOpacity:0.8
-})
-.addTo(depremLayer)
-.bindPopup(
-"<b>" + place + "</b><br>" +
-"Büyüklük: " + mag
-);
-
-});
-
-});
-
-// FAY HATLARI KATMANI
-var fayLayer = L.geoJSON(null,{
-style:{
-color:"red",
-weight:2
-}
-}).addTo(map);
-
-// MTA FAY JSON
+// Türkiye fay hatları
+var fayHatlari = L.geoJSON(null, { style:{color:"#ff0000", weight:2, fillOpacity:0} }).addTo(map);
 fetch("DFY_GEO_WGS84_2013_s.json")
 .then(res => res.json())
+.then(data => fayHatlari.addData(data));
+
+// USGS dünya depremleri
+fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
+.then(res => res.json())
+.then(data => animateDepremler(data));
+
+// Türkiye AFAD / Kandilli depremleri (örnek JSON dosya)
+fetch("AFAD_KANDILLI_TURKEY.json") // repo ile aynı klasöre koy
+.then(res => res.json())
 .then(data => {
+    data.forEach(eq => {
+        var marker = L.circleMarker([eq.lat, eq.lon], {
+            radius: eq.mag*3,
+            color: depremRenk(eq.mag),
+            fillColor: depremRenk(eq.mag),
+            fillOpacity: 0.7
+        }).bindPopup("<b>"+eq.loc+"</b><br>Büyüklük: "+eq.mag);
+        depremCluster.addLayer(marker);
+    });
+});
 
-fayLayer.addData(data);
+// Animasyonlu deprem ekleme
+function animateDepremler(data){
+    let sorted = data.features.sort((a,b)=> b.properties.time - a.properties.time);
+    let index = 0;
+    function addNext(){
+        if(index >= sorted.length) return;
+        let eq = sorted[index];
+        let marker = L.circleMarker([eq.geometry.coordinates[1], eq.geometry.coordinates[0]], {
+            radius: eq.properties.mag*3,
+            color: depremRenk(eq.properties.mag),
+            fillColor: depremRenk(eq.properties.mag),
+            fillOpacity: 0.7
+        }).bindPopup("<b>"+eq.properties.place+"</b><br>Büyüklük: "+eq.properties.mag);
+        depremCluster.addLayer(marker);
+        index++;
+        setTimeout(addNext, 50);
+    }
+    addNext();
+}
 
-})
-.catch(err => console.log("Fay verisi yüklenemedi"));
-
-// KATMAN KONTROLÜ
-var overlayMaps = {
-"Depremler": depremLayer,
-"Fay Hatları": fayLayer
+// Katman kontrolü
+var overlays = {
+    "Türkiye Fay Hatları": fayHatlari,
+    "Depremler": depremCluster
 };
-
-L.control.layers(null, overlayMaps).addTo(map);
+L.control.layers(null, overlays).addTo(map);
 
 </script>
-
 </body>
 </html>
