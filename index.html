@@ -1,76 +1,38 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canlı Deprem Haritası</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.5/dist/leaflet.css" />
+<meta charset="utf-8">
+<title>Deprem Haritası</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
 <style>
-html, body { margin:0; padding:0; height:100%; width:100%; }
-#map { height:100%; width:100%; }
+html, body {
+  margin:0;
+  padding:0;
+  height:100%;
+}
+#map {
+  width:100%;
+  height:100%;
+}
 </style>
 </head>
+
 <body>
 
 <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.5/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-  const accessToken = 'pk.eyJ1IjoiZGxyemtuIiwiYSI6ImNtbWV3emgzeTAyNnIyc3NvajQyeTJvd3cifQ.nL1bP70pD5WWJiycG6jtHw';
 
-  // Haritayı oluştur
-  const map = L.map('map').setView([39, 35], 5);
-  L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}?access_token=${accessToken}`, {
-      attribution: '© Mapbox © OpenStreetMap',
-      tileSize: 512,
-      zoomOffset: -1
-  }).addTo(map);
+var map = L.map('map').setView([39,35],6);
 
-  // Test noktası
-  const testPoint = L.circleMarker([39, 35], {
-    radius: 8,
-    color: 'red',
-    fillColor: '#f03',
-    fillOpacity: 0.8
-  }).addTo(map).bindPopup('Test Deprem');
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+maxZoom:19
+}).addTo(map);
 
-  let earthquakeMarkers = [];
-
-  async function loadEarthquakes() {
-      try {
-          const res = await fetch('deprem-data.json');
-          const data = await res.json();
-
-          // Önceki marker'ları temizle
-          earthquakeMarkers.forEach(m => map.removeLayer(m));
-          earthquakeMarkers = [];
-
-          data.features.forEach(f => {
-              const coords = f.geometry.coordinates;
-              const mag = f.properties.mag;
-              const place = f.properties.place;
-              const time = new Date(f.properties.time).toLocaleString();
-
-              const marker = L.circleMarker([coords[1], coords[0]], {
-                  radius: 4 + mag*2,
-                  color: 'orange',
-                  fillColor: 'yellow',
-                  fillOpacity: 0.7
-              }).addTo(map)
-                .bindPopup(`<b>${place}</b><br>Büyüklük: ${mag}<br>Zaman: ${time}`);
-
-              earthquakeMarkers.push(marker);
-          });
-      } catch (err) {
-          console.error("Deprem verisi yüklenemedi:", err);
-      }
-  }
-
-  // Sayfa açılır açılmaz yükle
-  loadEarthquakes();
-
-  // Her 5 dakikada bir yenile
-  setInterval(loadEarthquakes, 300000);
 </script>
 
 </body>
