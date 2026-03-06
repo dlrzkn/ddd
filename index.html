@@ -2,19 +2,20 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Deprem Haritası</title>
+<title>Türkiye Deprem Haritası</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-html, body {
-  margin:0;
-  padding:0;
-  height:100%;
+html, body{
+margin:0;
+padding:0;
+height:100%;
 }
-#map {
-  width:100%;
-  height:100%;
+
+#map{
+width:100%;
+height:100%;
 }
 </style>
 </head>
@@ -34,8 +35,24 @@ maxZoom:19
 }).addTo(map);
 
 
+/* büyüklüğe göre renk */
+
+function getColor(mag){
+
+return mag > 5 ? "red" :
+mag > 4 ? "orange" :
+mag > 3 ? "yellow" :
+"green";
+
+}
+
+
+/* deprem verisi */
+
 fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
+
 .then(response => response.json())
+
 .then(data => {
 
 data.features.forEach(eq => {
@@ -44,12 +61,24 @@ var coords = eq.geometry.coordinates;
 var mag = eq.properties.mag;
 var place = eq.properties.place;
 
-L.circleMarker([coords[1], coords[0]],{
+/* Türkiye filtresi */
+
+if(coords[1] > 35 && coords[1] < 43 &&
+coords[0] > 25 && coords[0] < 46){
+
+L.circleMarker([coords[1],coords[0]],{
+
 radius: mag * 3,
-color: "red"
+color: getColor(mag),
+fillOpacity:0.8
+
 })
 .addTo(map)
-.bindPopup("Magnitude: " + mag + "<br>" + place);
+.bindPopup(
+"Büyüklük: "+mag+"<br>"+place
+);
+
+}
 
 });
 
