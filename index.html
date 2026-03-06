@@ -2,38 +2,24 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Deprem Haritası</title>
+<title>Türkiye Deprem Haritası</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-html, body{
-margin:0;
-padding:0;
-height:100%;
+html, body {
+  margin:0;
+  padding:0;
+  height:100%;
 }
-
-#map{
-width:100%;
-height:100%;
-}
-
-button{
-position:absolute;
-top:10px;
-left:10px;
-z-index:1000;
-padding:8px 12px;
-background:white;
-border:1px solid gray;
-cursor:pointer;
+#map {
+  width:100%;
+  height:100%;
 }
 </style>
 </head>
 
 <body>
-
-<button onclick="turkiye()">Türkiye'ye Git</button>
 
 <div id="map"></div>
 
@@ -41,29 +27,29 @@ cursor:pointer;
 
 <script>
 
+// HARITA
 var map = L.map('map').setView([39,35],6);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+// HARITA TABANI
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
 maxZoom:19
 }).addTo(map);
 
-var depremLayer = L.layerGroup().addTo(map);
-
-
-
-function getColor(mag){
+// BÜYÜKLÜĞE GÖRE RENK
+function depremRenk(mag){
 
 if(mag >= 6) return "#ff0000";
 if(mag >= 5) return "#ff6600";
 if(mag >= 4) return "#ffcc00";
-if(mag >= 3) return "#ffff66";
-
-return "#66ff66";
+if(mag >= 3) return "#ffff00";
+return "#00ff00";
 
 }
 
+// DEPREM KATMANI
+var depremLayer = L.layerGroup().addTo(map);
 
-
+// USGS DEPREM VERİSİ
 fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
 .then(response => response.json())
 .then(data => {
@@ -74,44 +60,44 @@ var coords = eq.geometry.coordinates;
 var mag = eq.properties.mag;
 var place = eq.properties.place;
 
-if(mag == null) return;
-
-L.circleMarker([coords[1],coords[0]],{
-
+L.circleMarker([coords[1], coords[0]],{
 radius: mag * 3,
-color:getColor(mag),
-fillColor:getColor(mag),
-fillOpacity:0.8,
-weight:1
-
+color: depremRenk(mag),
+fillColor: depremRenk(mag),
+fillOpacity:0.8
 })
 .addTo(depremLayer)
 .bindPopup(
-"<b>Deprem</b><br>"+
-"Büyüklük: "+mag+"<br>"+
-"Yer: "+place
+"<b>" + place + "</b><br>" +
+"Büyüklük: " + mag
 );
 
 });
 
 });
 
-
-
-function turkiye(){
-
-map.setView([39,35],6);
-
+// FAY HATLARI KATMANI
+var fayLayer = L.geoJSON(null,{
+style:{
+color:"red",
+weight:2
 }
+}).addTo(map);
 
+// MTA FAY JSON
+fetch("DFY_GEO_WGS84_2013_s.json")
+.then(res => res.json())
+.then(data => {
 
+fayLayer.addData(data);
 
-var baseMaps = {
-"Harita": map
-};
+})
+.catch(err => console.log("Fay verisi yüklenemedi"));
 
+// KATMAN KONTROLÜ
 var overlayMaps = {
-"Depremler": depremLayer
+"Depremler": depremLayer,
+"Fay Hatları": fayLayer
 };
 
 L.control.layers(null, overlayMaps).addTo(map);
