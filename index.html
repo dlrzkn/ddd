@@ -2,90 +2,107 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deprem Haritası</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 <style>
-html, body { margin:0; padding:0; height:100%; }
-#map { width:100%; height:100%; }
+  html, body { margin:0; padding:0; height:100%; }
+  #map { width:100%; height:100%; }
 </style>
 </head>
 <body>
-
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <script>
-// 1️⃣ Harita oluştur
-var map = L.map('map').setView([39,35],5);
+var map = L.map('map').setView([39, 35], 5);
 
-// OpenStreetMap tabanı
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:19
+// Base layer
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom: 19
 }).addTo(map);
 
-// 2️⃣ Layer grupları
-var globalCluster = L.markerClusterGroup();
-var turkeyCluster = L.markerClusterGroup();
-var fayLayer = L.geoJSON(null, { style: { color: 'orange', weight: 2 } });
+// Layer grupları
+var worldQuakes = L.markerClusterGroup();
+var turkeyQuakes = L.markerClusterGroup();
+var fayLayer = L.layerGroup();
 
-// 3️⃣ Layer kontrolü
+// Layer control
 var overlayMaps = {
-  "Dünya Depremleri": globalCluster,
-  "Türkiye Depremleri": turkeyCluster,
-  "Fay Hatları": fayLayer
+    "Dünya Depremleri": worldQuakes,
+    "Türkiye Depremleri": turkeyQuakes,
+    "Fay Hatları": fayLayer
 };
-L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
+L.control.layers(null, overlayMaps, {collapsed:false}).addTo(map);
 
-// 4️⃣ Dünya depremleri (USGS)
-fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
+// Dünya depremleri
+fetch("deprem-data.json")
 .then(res => res.json())
 .then(data => {
     data.features.forEach(eq => {
         var coords = eq.geometry.coordinates;
         var mag = eq.properties.mag;
         var place = eq.properties.place;
-        var marker = L.circleMarker([coords[1], coords[0]],{
+        var time = new Date(eq.properties.time).toLocaleString();
+
+        var marker = L.circleMarker([coords[1], coords[0]], {
             radius: mag*2,
-            color: "red",
-            fillOpacity: 0.6
-        }).bindPopup(`<b>${place}</b><br>Magnitude: ${mag}`);
-        globalCluster.addLayer(marker);
+            color: mag > 5 ? "red" : (mag > 3 ? "orange" : "yellow"),
+            fillOpacity: 0.6,
+            weight:1
+        }).bindPopup(
+            "<b>"+place+"</b><br>" +
+            "Büyüklük: "+mag+"<br>" +
+            "Tarih: "+time
+        );
+
+        worldQuakes.addLayer(marker);
     });
-    globalCluster.addTo(map);
 });
 
-// 5️⃣ Türkiye depremleri (Örnek: repodaki JSON)
-fetch("https://dlrzkn.github.io/deprem-takip/turkiye_canli_depremler.geojson")
+// Türkiye depremleri
+fetch("turkiye-depremler.json")
 .then(res => res.json())
 .then(data => {
     data.features.forEach(eq => {
         var coords = eq.geometry.coordinates;
         var mag = eq.properties.mag;
-        var place = eq.properties.title || eq.properties.place;
-        var marker = L.circleMarker([coords[1], coords[0]],{
+        var place = eq.properties.place;
+        var time = new Date(eq.properties.time).toLocaleString();
+
+        var marker = L.circleMarker([coords[1], coords[0]], {
             radius: mag*3,
-            color: "blue",
-            fillOpacity: 0.6
-        }).bindPopup(`<b>${place}</b><br>Magnitude: ${mag}`);
-        turkeyCluster.addLayer(marker);
+            color: mag > 4 ? "red" : (mag > 2 ? "orange" : "yellow"),
+            fillOpacity:0.7,
+            weight:1
+        }).bindPopup(
+            "<b>"+place+"</b><br>" +
+            "Büyüklük: "+mag+"<br>" +
+            "Derinlik: "+eq.properties.depth+" km<br>" +
+            "Tarih: "+time
+        );
+
+        turkeyQuakes.addLayer(marker);
     });
-    turkeyCluster.addTo(map);
 });
 
-// 6️⃣ Fay hatları (JSON olarak repoda olabilir)
-fetch("https://dlrzkn.github.io/deprem-takip/DFY_GEO_WGS84_2013_s.json")
+// Fay hatları
+fetch("turkiye-faylar.json")
 .then(res => res.json())
 .then(data => {
-    fayLayer.addData(data);
-    // Başlangıçta açık
-    fayLayer.addTo(map);
+    L.geoJSON(data, {
+        style: { color: "blue", weight: 2 }
+    }).addTo(fayLayer);
 });
 
+// Varsayılan olarak cluster ekle
+map.addLayer(worldQuakes);
+map.addLayer(turkeyQuakes);
+map.addLayer(fayLayer);
 </script>
 </body>
 </html>
