@@ -23,13 +23,18 @@ html, body { margin:0; padding:0; height:100%; width:100%; }
 var map = L.map('map').setView([39, 35], 5);
 
 // OpenStreetMap katmanı
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-// Marker cluster grupları
+// Cluster grubu
 var clusterGroup = L.markerClusterGroup();
 map.addLayer(clusterGroup);
+
+// Fay hatları katmanı
+var fayLayer = L.geoJSON(null, { style: { color: 'orange', weight: 2 } }).addTo(map);
+fetch("DFY_GEO_WGS84_2013_s.json")
+.then(res => res.json())
+.then(data => fayLayer.addData(data))
+.catch(err => console.error("Fay hatları yüklenemedi:", err));
 
 // Renk fonksiyonu
 function getColor(mag) {
@@ -39,8 +44,11 @@ function getColor(mag) {
                      '#9ecae1';
 }
 
-// Depremleri ekleyen fonksiyon
+// Depremleri ekleme fonksiyonu
 function addEarthquakes(data) {
+    // Tarihe göre sırala (yeni → eski)
+    data.features.sort((a,b) => (b.properties.time || b.properties.tarih) - (a.properties.time || a.properties.tarih));
+
     data.features.forEach(eq => {
         var coords = eq.geometry.coordinates;
         var mag = eq.properties.mag;
@@ -61,17 +69,32 @@ function addEarthquakes(data) {
     });
 }
 
-// Dünya depremleri - USGS
-fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
-.then(res => res.json())
-.then(data => addEarthquakes(data))
-.catch(err => console.error("Dünya depremleri yüklenemedi:", err));
+// Dünya depremleri (USGS)
+function loadGlobalEarthquakes() {
+    fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
+    .then(res => res.json())
+    .then(data => addEarthquakes(data))
+    .catch(err => console.error("Dünya depremleri yüklenemedi:", err));
+}
 
-// Türkiye depremleri
-fetch("https://raw.githubusercontent.com/dlrzkn/deprem-takip/main/turkiye_canli_depremler.geojson")
-.then(res => res.json())
-.then(data => addEarthquakes(data))
-.catch(err => console.error("Türkiye depremleri yüklenemedi:", err));
+// Türkiye depremleri (deprem-takip repo)
+function loadTurkeyEarthquakes() {
+    fetch("https://raw.githubusercontent.com/dlrzkn/deprem-takip/main/turkiye_canli_depremler.geojson")
+    .then(res => res.json())
+    .then(data => addEarthquakes(data))
+    .catch(err => console.error("Türkiye depremleri yüklenemedi:", err));
+}
+
+// İlk yükleme
+loadGlobalEarthquakes();
+loadTurkeyEarthquakes();
+
+// Her 5 dakikada yenile
+setInterval(() => {
+    clusterGroup.clearLayers();
+    loadGlobalEarthquakes();
+    loadTurkeyEarthquakes();
+}, 300000);
 </script>
 
 </body>
