@@ -1,51 +1,32 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canlı Deprem Haritası</title>
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.16.0/mapbox-gl.css" rel="stylesheet" />
-<style>
-html, body { margin:0; padding:0; height:100%; width:100%; }
-#map { position:absolute; top:0; bottom:0; width:100%; }
-</style>
-</head>
-<body>
 <div id="map"></div>
-  <!-- Mapbox JS ve test noktası -->
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.16.0/mapbox-gl.js"></script>
-  <script>
-    mapboxgl.accessToken = 'pk.eyJ1IjoiZGxyemtuIiwiYSI6ImNtbWV3emgzeTAyNnIyc3NvajQyeTJvd3cifQ.nL1bP70pD5WWJiycG6jtHw';
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.21.0/mapbox-gl.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.21.0/mapbox-gl.js"></script>
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiZGxyemtuIiwiYSI6ImNtbWV3emgzeTAyNnIyc3NvajQyeTJvd3cifQ.nL1bP70pD5WWJiycG6jtHw';
 
-    const map = new mapboxgl.Map({
-        container: 'map',
-        style: 'mapbox://styles/mapbox/light-v11',
-        center: [35, 39],
-        zoom: 5
-    });
+const map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/light-v11',
+  center: [35, 39],
+  zoom: 5
+});
 
-    // Test noktası
-    map.on('load', () => {
-        map.addLayer({
-            id: 'test-point',
-            type: 'circle',
-            source: {
-                type: 'geojson',
-                data: {
-                    type: 'FeatureCollection',
-                    features: [{
-                        type: 'Feature',
-                        geometry: { type: 'Point', coordinates: [35, 39] },
-                        properties: { title: 'Test Deprem' }
-                    }]
-                }
-            },
-            paint: {
-                'circle-radius': 10,
-                'circle-color': '#f00'
-            }
-        });
-    });
-  </script>
-</body>
-</html>
+map.on('load', () => {
+  map.addLayer({
+    id: 'test-point',
+    type: 'circle',
+    source: {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [35, 39] },
+          properties: { title: 'Test Deprem' }
+        }]
+      }
+    },
+    paint: { 'circle-radius': 10, 'circle-color': '#f00' }
+  });
+});
+</script>
