@@ -1,37 +1,22 @@
 <!DOCTYPE html>
 <html>
-
 <head>
 <meta charset="utf-8">
-<title>Türkiye Deprem İzleme Sistemi</title>
+<title>Deprem Haritası</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-
-html,body{
+html, body {
 margin:0;
 padding:0;
 height:100%;
-font-family:Arial;
 }
 
 #map{
-height:100%;
 width:100%;
+height:100%;
 }
-
-.panel{
-position:absolute;
-top:10px;
-left:10px;
-background:white;
-padding:10px;
-border-radius:8px;
-box-shadow:0 0 10px rgba(0,0,0,0.3);
-z-index:1000;
-}
-
 </style>
 </head>
 
@@ -39,50 +24,33 @@ z-index:1000;
 
 <div id="map"></div>
 
-<div class="panel">
-<b>Türkiye Deprem Haritası</b><br>
-Son 24 saat
-</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 
-/* HARİTA */
-
 var map = L.map('map').setView([39,35],6);
 
-var osm = L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{maxZoom:19}
-).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+maxZoom:19
+}).addTo(map);
 
 
-/* DEPREM KATMANI */
-
-var depremLayer = L.layerGroup().addTo(map);
-
-
-/* RENK FONKSİYONU */
 
 function getColor(mag){
 
-return mag > 6 ? "#800026" :
-mag > 5 ? "#BD0026" :
-mag > 4 ? "#E31A1C" :
-mag > 3 ? "#FC4E2A" :
-mag > 2 ? "#FD8D3C" :
-"#FEB24C";
+if(mag >= 6) return "#ff0000";
+if(mag >= 5) return "#ff6600";
+if(mag >= 4) return "#ffcc00";
+if(mag >= 3) return "#ffff66";
+
+return "#66ff66";
 
 }
 
 
-/* USGS VERİSİ */
 
 fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
-
 .then(response => response.json())
-
 .then(data => {
 
 data.features.forEach(eq => {
@@ -90,12 +58,8 @@ data.features.forEach(eq => {
 var coords = eq.geometry.coordinates;
 var mag = eq.properties.mag;
 var place = eq.properties.place;
-var time = new Date(eq.properties.time);
 
-/* TÜRKİYE FİLTRESİ */
-
-if(coords[1] > 35 && coords[1] < 43 &&
-coords[0] > 25 && coords[0] < 46){
+if(mag == null) return;
 
 L.circleMarker([coords[1],coords[0]],{
 
@@ -106,42 +70,18 @@ fillOpacity:0.8,
 weight:1
 
 })
-.addTo(depremLayer)
+.addTo(map)
 .bindPopup(
 "<b>Deprem</b><br>"+
 "Büyüklük: "+mag+"<br>"+
-"Yer: "+place+"<br>"+
-"Saat: "+time
+"Yer: "+place
 );
 
-}
-
 });
 
 });
-
-
-/* FAY HATLARI (GeoJSON eklenebilir) */
-
-var fayLayer = L.layerGroup();
-
-
-/* KATMAN KONTROL */
-
-var baseMaps = {
-"OpenStreetMap": osm
-};
-
-var overlayMaps = {
-"Depremler": depremLayer,
-"Fay Hatları": fayLayer
-};
-
-L.control.layers(baseMaps,overlayMaps).addTo(map);
-
 
 </script>
 
 </body>
-
 </html>
