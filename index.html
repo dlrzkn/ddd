@@ -33,6 +33,28 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
 maxZoom:19
 }).addTo(map);
 
+
+fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
+.then(response => response.json())
+.then(data => {
+
+data.features.forEach(eq => {
+
+var coords = eq.geometry.coordinates;
+var mag = eq.properties.mag;
+var place = eq.properties.place;
+
+L.circleMarker([coords[1], coords[0]],{
+radius: mag * 3,
+color: "red"
+})
+.addTo(map)
+.bindPopup("Magnitude: " + mag + "<br>" + place);
+
+});
+
+});
+
 </script>
 
 </body>
